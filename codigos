@@ -1,1 +1,11 @@
+GERAR DOIS SERVICOS COM BARRA E TOM 1 KHZ E 4 KHZ
 
+ffmpeg -re -f lavfi -i "testsrc=size=320x240:rate=10" -f lavfi -i "sine=frequency=1000:sample_rate=22050" -f lavfi -i "testsrc=size=320x240:rate=10,hflip" -f lavfi -i "sine=frequency=4000:sample_rate=22050" -map 0:v -map 1:a -map 2:v -map 3:a -c:v libx264 -preset ultrafast -tune zerolatency -crf 30 -g 20 -c:a aac -b:a 48k -ac 1 -program title="S1":program_num=1:st=0:st=1 -program title="S2":program_num=2:st=2:st=3 -f mpegts "udp://192.168.192.158:1234?pkt_size=1316"
+
+TAXA CONSTANTE
+
+ffmpeg -re -f lavfi -i "testsrc=size=320x240:rate=10" -f lavfi -i "sine=frequency=1000:sample_rate=48000" -f lavfi -i "testsrc=size=320x240:rate=10,hflip" -f lavfi -i "sine=frequency=4000:sample_rate=48000" -map 0:v -map 1:a -map 2:v -map 3:a -c:v libx264 -preset ultrafast -tune zerolatency -b:v 300k -c:a aac -b:a 64k -program title="Servico1":program_num=101:st=0:st=1 -program title="Servico2":program_num=102:st=2:st=3 -mpegts_pmt_start_pid 0x400 -mpegts_start_pid 0x500 -mpegts_transport_stream_id 0x0001 -mpegts_service_id 0x0065 -muxrate 1500k -f mpegts "udp://10.10.23.3:10010?pkt_size=1316"
+
+
+EXTRAIR CC
+ffmpeg -re -i "udp://@192.168.192.158:5004?overrun_nonfatal=1&fifo_size=1000000" -map 0:v -map 0:a:0 -map 0:a:1 -map 0:v -c:v:0 copy -c:a:0 copy -c:a:1 copy -c:s:0 mpegts -metadata:s:s:0 language=por -program title="RECORD TV":program_num=4001:st=0:st=1:st=2:st=3 -pcr_period 20 -pat_period 0.1 -sdt_period 0.1 -f mpegts -mpegts_flags resend_headers -metadata service_name="RECORD TV" -metadata service_provider="SPEEDCAST" "udp://10.10.23.3:10010?pkt_size=1316&bitrate=5000000"
