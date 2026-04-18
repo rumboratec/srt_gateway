@@ -9,3 +9,7 @@ ffmpeg -re -f lavfi -i "testsrc=size=320x240:rate=10" -f lavfi -i "sine=frequenc
 
 EXTRAIR CC
 ffmpeg -re -i "udp://@192.168.192.158:5004?overrun_nonfatal=1&fifo_size=1000000" -map 0:v -map 0:a:0 -map 0:a:1 -map 0:v -c:v:0 copy -c:a:0 copy -c:a:1 copy -c:s:0 mpegts -metadata:s:s:0 language=por -program title="RECORD TV":program_num=4001:st=0:st=1:st=2:st=3 -pcr_period 20 -pat_period 0.1 -sdt_period 0.1 -f mpegts -mpegts_flags resend_headers -metadata service_name="RECORD TV" -metadata service_provider="SPEEDCAST" "udp://10.10.23.3:10010?pkt_size=1316&bitrate=5000000"
+
+GERAR COM PID OK
+ffmpeg -re -f lavfi -i smptebars=size=720x480:rate=30 -f lavfi -i "sine=frequency=1000:sample_rate=48000" -c:v libx264 -preset ultrafast -b:v 3M -maxrate 3M -bufsize 1.5M -pix_fmt yuv420p -c:a aac -b:a 96k -ar 48000 -f mpegts -mpegts_flags +latm -mpegts_pmt_start_pid 32 -streamid 0:33 -streamid 1:34 -mpegts_service_id 1 -pcr_period 20 -muxrate 6M "udp://10.10.23.6:10017?pkt_size=1316"
+
