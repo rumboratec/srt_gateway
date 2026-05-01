@@ -15,3 +15,7 @@ ffmpeg -re -f lavfi -i smptebars=size=720x480:rate=30 -f lavfi -i "sine=frequenc
 
 GERAR V2
 ffmpeg -re -f lavfi -i smptebars=size=720x480:rate=30 -f lavfi -i "sine=frequency=1000:sample_rate=48000" -c:v libx264 -preset ultrafast -b:v 3M -maxrate 3M -bufsize 3M -pix_fmt yuv420p -c:a aac -b:a 96k -ar 48000 -f mpegts -mpegts_flags +resend_headers+pat_pmt_at_frames -mpegts_service_type digital_tv -mpegts_service_id 1 -mpegts_pmt_start_pid 4096 -streamid 0:256 -streamid 1:257 -pcr_period 20 -muxrate 6000000 "udp://10.10.23.6:10017?pkt_size=1316"
+
+GERAL ok
+
+screen -dmS tv_srt sh -c 'sudo nice -n -20 srt-live-transmit -v -s 1000 "srt://189.42.242.178:1050?mode=caller&latency=2000" udp://10.10.23.5:1234'
