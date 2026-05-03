@@ -1,3 +1,66 @@
+http://192.168.0.51/
+
+VIACAST - PLAYPLUS
+IP: 192.168.0.51
+User: pplfla
+Pass: R3cPl@y!@#FLA
+
+
+MK - CONTRIBUICAO
+IP: 192.168.0.30
+User: afiliada
+Pass: 850!*FLO$#
+
+
+srt://189.42.242.178:1050
+
+45.176.5.154
+tplink .107 7077
+
+via 7070
+45.176.5.10
+
+screen -S transmissao bash -c 'while true; do sudo nice -n -20 srt-live-transmit -v -s 1000 "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&sendbuf=2000000&rcvbuf=2000000&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Conexão perdida. Reiniciando..."; sleep 5; done'LENDO
+
+apt-get install neofetch
+apt-get install inxi
+
+
+COMANDO VALENDO
+
+CONFERIR A REDE 
+netstat -su
+
+
+cd /etc/sysctl.d/
+ls
+nano 97-dietpi.conf
+otimizar a rede, colcoar esses comandos no final do arquivo
+net.core.rmem_max=8388608
+net.core.wmem_max=8388608
+net.core.netdev_max_backlog=5000
+
+
+sudo sysctl -w net.core.rmem_max=8388608
+sudo sysctl -w net.core.wmem_max=8388608
+sudo sysctl -w net.core.netdev_max_backlog=5000
+
+sudo nice -n -20 srt-live-transmit "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://192.168.192.86:1057?pkt_size=1316"
+Media path: 'srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000' --> 'udp://192.168.192.86:1057?pkt_size=1316'
+
+CONFERIR
+sudo sysctl --system
+
+crontab -e
+@reboot screen -dmS transmissao bash -c 'while true; do sudo nice -n -20 srt-live-transmit "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Reiniciando..."; sleep 5; done'
+
+
+
+comando otimizado
+screen -S transmissao bash -c 'while true; do sudo nice -n -20 srt-live-transmit "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Reiniciando..."; sleep 5; done'
+
+
+
 GERAR DOIS SERVICOS COM BARRA E TOM 1 KHZ E 4 KHZ
 
 ffmpeg -re -f lavfi -i "testsrc=size=320x240:rate=10" -f lavfi -i "sine=frequency=1000:sample_rate=22050" -f lavfi -i "testsrc=size=320x240:rate=10,hflip" -f lavfi -i "sine=frequency=4000:sample_rate=22050" -map 0:v -map 1:a -map 2:v -map 3:a -c:v libx264 -preset ultrafast -tune zerolatency -crf 30 -g 20 -c:a aac -b:a 48k -ac 1 -program title="S1":program_num=1:st=0:st=1 -program title="S2":program_num=2:st=2:st=3 -f mpegts "udp://192.168.192.158:1234?pkt_size=1316"
