@@ -12,12 +12,12 @@ User: afiliada
 Pass: 850!*FLO$#
 
 
-srt://189.42.242.178:1050
+srt://189.42.242.178:1026
 
-45.176.5.154
+MK 45.176.5.154
 tplink .107 7077
 
-via 7070
+viacast 7070
 45.176.5.10
 
 screen -S transmissao bash -c 'while true; do sudo nice -n -20 srt-live-transmit -v -s 1000 "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&sendbuf=2000000&rcvbuf=2000000&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Conexão perdida. Reiniciando..."; sleep 5; done'LENDO
