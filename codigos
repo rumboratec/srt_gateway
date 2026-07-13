@@ -1,10 +1,12 @@
 Janga MG300
 sudo srt-live-transmit "srt://189.42.242.178:1026?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://192.168.192.158:1057?pkt_size=1316"
 
-MK CIDADE
+
 sudo srt-live-transmit "srt://45.176.5.10:7070?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://192.168.192.158:1057?pkt_size=1316"
 
 
+MK CIDADE ok
+sudo srt-live-transmit -v -c 1316 "srt://45.176.5.154:7077?mode=caller&latency=2000&maxbw=-1&fc=128000&payloadsize=1316" "udp://192.168.192.72:10011?pkt_size=1316"
 
 http://192.168.0.51/
 
