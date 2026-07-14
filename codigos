@@ -1,3 +1,7 @@
+
+RIST
+ristreceiver -i rist://45.176.5.154:7077 -o udp://192.168.192.158:8181 -p 1 -b 5000
+
 Janga MG300
 sudo srt-live-transmit "srt://189.42.242.178:1026?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://192.168.192.158:1057?pkt_size=1316"
 
