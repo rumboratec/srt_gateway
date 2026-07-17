@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RIST-CTRL // Master Control Receiver</title>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0a0d12;
+    --panel:#10141b;
+    --panel-2:#151a22;
+    --line:#232a35;
+    --line-soft:#1a2029;
+    --text:#e8ecf2;
+    --text-dim:#7b8794;
+    --text-faint:#48505c;
+    --green:#00e6a0;
+    --green-dim:#0a4a3a;
+    --red:#ff2d4a;
+    --red-dim:#4a0f1c;
+    --amber:#ffb020;
+    --amber-dim:#4a3810;
+    --blue:#4da3ff;
+    --blue-dim:#0f2c4a;
+    --cyan:#35e0d0;
+    --mono: 'JetBrains Mono', monospace;
+    --cond: 'Oswald', sans-serif;
+    --sans: 'Inter', sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(77,163,255,0.06), transparent 60%),
+      var(--void);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+
+  /* subtle scanline / grain texture for a broadcast-monitor feel */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    z-index:9999;
+  }
+
+  ::selection{background:var(--blue-dim); color:var(--text);}
+
+  .wrap{
+    max-width:1400px;
+    margin:0 auto;
+    padding:20px 24px 60px;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px 22px;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line);
+    border-radius:4px;
+    margin-bottom:14px;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-mark{
+    width:38px; height:38px;
+    border:2px solid var(--blue);
+    border-radius:3px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--cond); font-weight:700; font-size:13px;
+    color:var(--blue);
+    box-shadow: 0 0 14px rgba(77,163,255,0.25) inset;
+    flex-shrink:0;
+  }
+  .brand-text h1{
+    font-family:var(--cond); font-weight:600; font-size:19px; letter-spacing:0.04em;
+    margin:0; color:var(--text); text-transform:uppercase;
+  }
+  .brand-text p{
+    margin:2px 0 0; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;
+    font-family:var(--mono);
+  }
+
+  .tally{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 18px 9px 14px;
+    border:1px solid var(--red);
+    border-radius:3px;
+    background:rgba(255,45,74,0.06);
+  }
+  .tally.on{
+    border-color:var(--green);
+    background:rgba(0,230,160,0.07);
+  }
+  .tally-dot{
+    width:11px; height:11px; border-radius:50%;
+    background:var(--red);
+    box-shadow:0 0 10px 2px rgba(255,45,74,0.7);
+    animation:blink 1.4s step-start infinite;
+  }
+  .tally.on .tally-dot{
+    background:var(--green);
+    box-shadow:0 0 10px 2px rgba(0,230,160,0.7);
+    animation:none;
+  }
+  @keyframes blink{ 50%{opacity:0.25;} }
+  .tally-label{
+    font-family:var(--cond); font-weight:600; font-size:13px; letter-spacing:0.08em;
+    color:var(--red); text-transform:uppercase;
+  }
+  .tally.on .tally-label{color:var(--green);}
+
+  /* ---------- SIGNAL PATH ---------- */
+  .signalpath{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:18px 26px 20px;
+    margin-bottom:14px;
+  }
+  .signalpath-label{
+    font-family:var(--cond); font-size:11px; letter-spacing:0.16em; color:var(--text-faint);
+    text-transform:uppercase; margin-bottom:14px;
+  }
+  .chain{
+    display:flex; align-items:center; gap:0;
+  }
+  .node{
+    flex:1;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    border-radius:3px;
+    padding:12px 16px;
+    position:relative;
+    transition:border-color .3s, box-shadow .3s;
+  }
+  .node .n-role{
+    font-family:var(--cond); font-size:10px; letter-spacing:0.14em; color:var(--text-faint);
+    text-transform:uppercase; margin-bottom:4px;
+  }
+  .node .n-val{
+    font-family:var(--mono); font-size:13px; color:var(--text-dim); word-break:break-all;
+  }
+  .node .n-dot{
+    position:absolute; top:12px; right:12px;
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-faint);
+  }
+  .node.active{ border-color:var(--blue); box-shadow:0 0 0 1px rgba(77,163,255,0.15), 0 0 16px rgba(77,163,255,0.12) inset;}
+  .node.active .n-val{color:var(--blue);}
+  .node.active .n-dot{background:var(--blue); box-shadow:0 0 6px 1px var(--blue);}
+  .node.decoder.active{border-color:var(--green);}
+  .node.decoder.active .n-val{color:var(--green);}
+  .node.decoder.active .n-dot{background:var(--green); box-shadow:0 0 6px 1px var(--green);}
+  .node.out.active{border-color:var(--amber);}
+  .node.out.active .n-val{color:var(--amber);}
+  .node.out.active .n-dot{background:var(--amber); box-shadow:0 0 6px 1px var(--amber);}
+
+  .link{
+    width:56px; height:2px; flex-shrink:0;
+    background:var(--line);
+    position:relative;
+    margin:0 -1px;
+  }
+  .link.flow{
+    background:repeating-linear-gradient(90deg, var(--blue) 0 6px, transparent 6px 12px);
+    background-size:18px 2px;
+    animation:flow 0.6s linear infinite;
+  }
+  @keyframes flow{ to{ background-position:-18px 0; } }
+
+  /* ---------- GRID ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap:14px;
+  }
+  .grid > div{min-width:0;}
+  @media (max-width:960px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px;
+  }
+  .panel-title{
+    font-family:var(--cond); font-weight:600; font-size:13px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--text); margin:0 0 4px;
+  }
+  .panel-sub{
+    font-size:11px; color:var(--text-dim); margin:0 0 16px; font-family:var(--sans);
+  }
+
+  .field-group{
+    border-top:1px solid var(--line-soft);
+    padding-top:14px; margin-top:14px;
+  }
+  .field-group:first-of-type{border-top:none; padding-top:0; margin-top:0;}
+  .field-group h3{
+    font-family:var(--cond); font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
+    margin:0 0 10px; font-weight:600;
+  }
+  .field-group.in h3{color:var(--blue);}
+  .field-group.out h3{color:var(--amber);}
+
+  label.f{
+    display:block; font-size:10px; letter-spacing:0.05em; color:var(--text-faint);
+    text-transform:uppercase; margin-bottom:5px; font-family:var(--sans);
+  }
+  input, select{
+    width:100%;
+    background:var(--void);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:9px 10px;
+    border-radius:3px;
+    font-family:var(--mono);
+    font-size:13px;
+    margin-bottom:10px;
+    outline:none;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus{border-color:var(--blue);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .row2 input, .row2 > div input{margin-bottom:0;}
+
+  select{font-family:var(--sans); font-size:12px;}
+
+  .btns{display:flex; gap:10px; margin-top:16px;}
+  button{
+    font-family:var(--cond); font-weight:600; font-size:13px; letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:11px 14px;
+    border-radius:3px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:filter .15s, transform .05s;
+    flex:1;
+  }
+  button:active{transform:translateY(1px);}
+  #btnStart{background:var(--green); color:#04140f;}
+  #btnStart:hover{filter:brightness(1.1);}
+  #btnStop{background:transparent; color:var(--red); border-color:var(--red);}
+  #btnStop:hover{background:rgba(255,45,74,0.08);}
+  .hidden{display:none !important;}
+
+  /* ---------- METERS ---------- */
+  .meters-row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;}
+  @media (max-width:640px){.meters-row{grid-template-columns:1fr;}}
+  .meter{
+    background:var(--panel-2);
+    border:1px solid var(--line-soft);
+    border-radius:3px;
+    padding:14px 16px;
+  }
+  .meter-head{display:flex; flex-direction:column; gap:6px; margin-bottom:2px;}
+  .meter-head .m-label{
+    font-family:var(--cond); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim);
+  }
+  .meter-head .m-val{font-family:var(--mono); font-size:28px; font-weight:700;}
+  .meter.in .m-val{color:var(--blue);}
+  .meter.out .m-val{color:var(--amber);}
+  .meter-sub{font-size:10px; color:var(--text-faint); margin-top:2px; font-family:var(--sans);}
+
+  .metrics-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;
+  }
+  @media (max-width:640px){.metrics-grid{grid-template-columns:repeat(2,1fr);}}
+  .stat{
+    background:var(--panel-2); border:1px solid var(--line-soft); border-radius:3px;
+    padding:12px 14px; text-align:center;
+  }
+  .stat .s-label{
+    font-family:var(--cond); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint);
+    margin-bottom:6px;
+  }
+  .stat .s-val{font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text);}
+  .stat.quality .s-val{color:var(--green);}
+  .stat.rtt .s-val{color:var(--cyan);}
+  .stat.loss .s-val{color:var(--red); font-size:13px;}
+
+  .sys-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;
+  }
+  @media (max-width:640px){.sys-strip{grid-template-columns:repeat(2,1fr);}}
+  .sys-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:3px;
+    padding:12px 14px;
+  }
+  .sys-card .sc-label{
+    font-family:var(--cond); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint);
+    margin-bottom:5px;
+  }
+  .sys-card .sc-val{font-family:var(--mono); font-size:15px; font-weight:600;}
+  .sys-card.cpu .sc-val{color:var(--amber);}
+  .sys-card.ram .sc-val{color:#c084fc;}
+
+  .console-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:16px 18px;
+    display:flex; flex-direction:column; height:240px; min-width:0;
+  }
+  .console-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .console-head .c-title{
+    font-family:var(--cond); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim);
+  }
+  .console-head button.clear{
+    all:unset; cursor:pointer; font-size:10px; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--text-faint); font-family:var(--cond); border-bottom:1px solid var(--text-faint);
+  }
+  .console-head button.clear:hover{color:var(--text); border-color:var(--text);}
+  #consoleOutput{
+    background:#05070a;
+    border:1px solid var(--line-soft);
+    border-radius:3px;
+    padding:12px 14px;
+    font-family:var(--mono); font-size:11.5px; line-height:1.5;
+    color:var(--green);
+    overflow-y:auto; overflow-x:hidden; flex:1;
+    white-space:pre-wrap;
+    word-break:break-all;
+    overflow-wrap:anywhere;
+    margin:0;
+    max-width:100%;
+  }
+
+  .interface-select{display:flex; align-items:center; gap:8px;}
+  .interface-select label{
+    font-size:10px; letter-spacing:0.06em; color:var(--text-faint); text-transform:uppercase;
+    white-space:nowrap; font-family:var(--cond);
+  }
+  #networkInterface{margin-bottom:0; min-width:220px;}
+
+  .netcard-head{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; flex-wrap:wrap;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:1024px){
+    .wrap{padding:16px 16px 40px;}
+  }
+
+  @media (max-width:700px){
+    .topbar{flex-wrap:wrap; gap:12px; padding:14px 16px;}
+    .brand-text h1{font-size:15px;}
+    .brand-text p{font-size:10px;}
+    .tally{padding:7px 14px 7px 12px;}
+
+    .signalpath{padding:14px 16px 16px;}
+    .chain{flex-direction:column; align-items:stretch;}
+    .node{width:100%;}
+    .link{width:2px; height:22px; margin:0 auto;}
+    .link.flow{
+      background:repeating-linear-gradient(180deg, var(--blue) 0 6px, transparent 6px 12px);
+      background-size:2px 18px;
+      animation:flow-v 0.6s linear infinite;
+    }
+
+    .panel{padding:16px;}
+    .row2{grid-template-columns:1fr; gap:0;}
+    .btns{flex-direction:column;}
+
+    .netcard-head{flex-direction:column; align-items:stretch;}
+    .interface-select{flex-direction:column; align-items:stretch; gap:4px;}
+    #networkInterface{min-width:0; width:100%;}
+
+    .meter-head .m-val{font-size:24px;}
+    .console-panel{height:200px;}
+    input, select{font-size:16px;}
+  }
+
+  @media (max-width:420px){
+    .metrics-grid{grid-template-columns:repeat(2,1fr);}
+    .sys-strip{grid-template-columns:repeat(2,1fr);}
+    .meters-row{grid-template-columns:1fr;}
+    .brand-mark{width:32px; height:32px; font-size:11px;}
+  }
+
+  @keyframes flow-v{ to{ background-position:0 -18px; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">RX</div>
+      <div class="brand-text">
+        <h1>RIST-CTRL // Master Control Receiver</h1>
+        <p>rist stream ingest &middot; decode &middot; udp redistribution</p>
+      </div>
+    </div>
+    <div id="app-status-badge" class="tally">
+      <div class="tally-dot"></div>
+      <div class="tally-label">Standby</div>
+    </div>
+  </div>
+
+  <!-- SIGNAL PATH -->
+  <div class="signalpath">
+    <div class="signalpath-label">Signal Path</div>
+    <div class="chain">
+      <div class="node" id="nodeIn">
+        <div class="n-dot"></div>
+        <div class="n-role">Rist In</div>
+        <div class="n-val" id="nodeInVal">— : —</div>
+      </div>
+      <div class="link" id="linkA"></div>
+      <div class="node decoder" id="nodeDecoder">
+        <div class="n-dot"></div>
+        <div class="n-role">Decoder</div>
+        <div class="n-val" id="nodeDecoderVal">Idle</div>
+      </div>
+      <div class="link" id="linkB"></div>
+      <div class="node out" id="nodeOut">
+        <div class="n-dot"></div>
+        <div class="n-role">Udp Out</div>
+        <div class="n-val" id="nodeOutVal">— : —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="grid">
+
+    <!-- LEFT: CONFIG -->
+    <div class="panel" style="height:fit-content;">
+      <h2 class="panel-title">Stream Configuration</h2>
+      <p class="panel-sub">Parâmetros de entrada, saída e perfil RIST</p>
+
+      <div class="field-group in">
+        <h3>Entrada RIST</h3>
+        <label class="f">IP de Origem</label>
+        <input id="ristIp" type="text" value="45.176.5.154">
+        <div class="row2">
+          <div>
+            <label class="f">Porta</label>
+            <input id="ristPort" type="number" value="7077">
+          </div>
+          <div>
+            <label class="f">Latência (ms)</label>
+            <input id="latency" type="number" value="5000">
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group out">
+        <h3>Saída UDP</h3>
+        <div class="row2">
+          <div>
+            <label class="f">IP de Saída</label>
+            <input id="udpOutIp" type="text" value="192.168.192.158">
+          </div>
+          <div>
+            <label class="f">Porta de Saída</label>
+            <input id="udpOutPort" type="number" value="8181">
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <h3 style="color:var(--text-dim);">Perfil RIST (-p)</h3>
+        <select id="profile">
+          <option value="1">1 — Main Profile (Padrão)</option>
+          <option value="0">0 — Simple Profile</option>
+          <option value="2">2 — Advanced Profile</option>
+        </select>
+      </div>
+
+      <div class="btns">
+        <button id="btnStart">Iniciar Receiver</button>
+        <button id="btnStop" class="hidden">Parar Receiver</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: TELEMETRY -->
+    <div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="netcard-head">
+          <div>
+            <h2 class="panel-title">Banda Real Ocupada na Placa</h2>
+            <p class="panel-sub" style="margin-bottom:0;">Tráfego de entrada e saída em tempo real</p>
+          </div>
+          <div class="interface-select">
+            <label>Interface</label>
+            <select id="networkInterface">
+              <option value="">Carregando interfaces...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="meters-row">
+          <div class="meter in">
+            <div class="meter-head">
+              <span class="m-label">↓ In / Download</span>
+              <span class="m-val" id="netIn">0.00 Mbps</span>
+            </div>
+            <div class="meter-sub">Tráfego recebido por esta placa</div>
+          </div>
+          <div class="meter out">
+            <div class="meter-head">
+              <span class="m-label">↑ Out / Upload</span>
+              <span class="m-val" id="netOut">0.00 Mbps</span>
+            </div>
+            <div class="meter-sub">Tráfego enviado por esta placa</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <h2 class="panel-title" style="margin-bottom:14px;">Qualidade do Link RIST</h2>
+        <div class="metrics-grid">
+          <div class="stat">
+            <div class="s-label">Bitrate</div>
+            <div class="s-val" id="ristBitrate">0.00 Mbps</div>
+          </div>
+          <div class="stat quality">
+            <div class="s-label">Qualidade</div>
+            <div class="s-val" id="ristQuality">0%</div>
+          </div>
+          <div class="stat rtt">
+            <div class="s-label">RTT / Ping</div>
+            <div class="s-val" id="ristRtt">-- ms</div>
+          </div>
+          <div class="stat loss">
+            <div class="s-label">Perdidos / Recov.</div>
+            <div class="s-val" id="ristPacketRatio">0 / 0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sys-strip">
+        <div class="sys-card">
+          <div class="sc-label">Uptime App</div>
+          <div class="sc-val" id="metricAppUptime" style="color:var(--blue);">00:00:00</div>
+        </div>
+        <div class="sys-card cpu">
+          <div class="sc-label">Uso de CPU</div>
+          <div class="sc-val" id="metricCpu">0%</div>
+        </div>
+        <div class="sys-card ram">
+          <div class="sc-label">Memória RAM</div>
+          <div class="sc-val" id="metricRam">0%</div>
+        </div>
+        <div class="sys-card">
+          <div class="sc-label">Uptime Servidor</div>
+          <div class="sc-val" id="metricSysUptime" style="color:var(--text-dim);">00:00:00</div>
+        </div>
+      </div>
+
+      <div class="console-panel">
+        <div class="console-head">
+          <span class="c-title">Saída de Terminal (-v / -)</span>
+          <button class="clear" id="btnClearConsole">Limpar Console</button>
+        </div>
+        <pre id="consoleOutput"></pre>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const socket = io();
+
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+  const consoleOutput = document.getElementById('consoleOutput');
+  const badge = document.getElementById('app-status-badge');
+  const selectInterface = document.getElementById('networkInterface');
+  const nodeIn = document.getElementById('nodeIn');
+  const nodeDecoder = document.getElementById('nodeDecoder');
+  const nodeOut = document.getElementById('nodeOut');
+  const linkA = document.getElementById('linkA');
+  const linkB = document.getElementById('linkB');
+
+  let lastLost = 0;
+  let lastRecovered = 0;
+
+  function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+  }
+
+  // Popula as interfaces de rede no select (TODAS as encontradas no backend)
+  socket.on('interfaces', (interfaces) => {
+      selectInterface.innerHTML = '<option value="">-- Escolha uma Interface --</option>';
+      interfaces.forEach(i => {
+          const opt = document.createElement('option');
+          opt.value = i.name;
+          const suffix = i.internal ? ' [Local]' : '';
+          opt.textContent = `${i.name} (${i.address})${suffix}`;
+          selectInterface.appendChild(opt);
+      });
+
+      if (interfaces.length > 0) {
+          const activeOnes = ['ztk4jdh6nq', 'wlp3s0'];
+          let bestIdx = interfaces.findIndex(i => activeOnes.includes(i.name));
+          if (bestIdx === -1) {
+              bestIdx = interfaces.findIndex(i => !i.internal && i.address !== 'Sem IP configurado');
+          }
+          selectInterface.selectedIndex = (bestIdx !== -1) ? (bestIdx + 1) : 1;
+          triggerInterfaceChange();
+      }
+  });
+
+  function triggerInterfaceChange() {
+      const selectedName = selectInterface.value;
+      if (selectedName) {
+          socket.emit('set-active-interface', selectedName);
+      }
+  }
+
+  selectInterface.addEventListener('change', triggerInterfaceChange);
+
+  // Atualização de Status
+  socket.on('status', (state) => {
+      if (state.running) {
+          badge.classList.add('on');
+          badge.querySelector('.tally-label').textContent = 'On Air';
+          btnStart.classList.add('hidden');
+          btnStop.classList.remove('hidden');
+
+          nodeIn.classList.add('active');
+          nodeDecoder.classList.add('active');
+          nodeOut.classList.add('active');
+          linkA.classList.add('flow');
+          linkB.classList.add('flow');
+          document.getElementById('nodeDecoderVal').textContent = 'Streaming';
+      } else {
+          badge.classList.remove('on');
+          badge.querySelector('.tally-label').textContent = 'Standby';
+          btnStart.classList.remove('hidden');
+          btnStop.classList.add('hidden');
+          document.getElementById('metricAppUptime').textContent = "00:00:00";
+
+          document.getElementById('netIn').textContent = "0.00 Mbps";
+          document.getElementById('netOut').textContent = "0.00 Mbps";
+
+          nodeIn.classList.remove('active');
+          nodeDecoder.classList.remove('active');
+          nodeOut.classList.remove('active');
+          linkA.classList.remove('flow');
+          linkB.classList.remove('flow');
+          document.getElementById('nodeDecoderVal').textContent = 'Idle';
+          document.getElementById('nodeInVal').textContent = '— : —';
+          document.getElementById('nodeOutVal').textContent = '— : —';
+      }
+  });
+
+  socket.on('log', (logText) => {
+      consoleOutput.textContent += logText;
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+  });
+
+  socket.on('sys-metrics', (metrics) => {
+      document.getElementById('metricCpu').textContent = `${metrics.cpu}%`;
+      document.getElementById('metricRam').textContent = `${metrics.memory.usedPercent}%`;
+      document.getElementById('metricSysUptime').textContent = formatTime(metrics.systemUptime);
+
+      if (metrics.network) {
+          document.getElementById('netIn').textContent = metrics.network.rxSec;
+          document.getElementById('netOut').textContent = metrics.network.txSec;
+      }
+  });
+
+  socket.on('app-uptime', (seconds) => {
+      document.getElementById('metricAppUptime').textContent = formatTime(seconds);
+  });
+
+  socket.on('rist-metrics', (metrics) => {
+      if (metrics.quality) document.getElementById('ristQuality').textContent = metrics.quality;
+      if (metrics.rtt) document.getElementById('ristRtt').textContent = metrics.rtt;
+      if (metrics.bitrate) document.getElementById('ristBitrate').textContent = metrics.bitrate;
+      if (metrics.lost !== undefined) lastLost = metrics.lost;
+      if (metrics.recovered !== undefined) lastRecovered = metrics.recovered;
+
+      document.getElementById('ristPacketRatio').textContent = `${lastLost} / ${lastRecovered}`;
+  });
+
+  btnStart.addEventListener('click', () => {
+      const config = {
+          ristIp: document.getElementById('ristIp').value,
+          ristPort: document.getElementById('ristPort').value,
+          latency: document.getElementById('latency').value,
+          udpOutIp: document.getElementById('udpOutIp').value,
+          udpOutPort: document.getElementById('udpOutPort').value,
+          profile: document.getElementById('profile').value
+      };
+      socket.emit('start-rist', config);
+
+      document.getElementById('nodeInVal').textContent = `${config.ristIp}:${config.ristPort}`;
+      document.getElementById('nodeOutVal').textContent = `${config.udpOutIp}:${config.udpOutPort}`;
+  });
+
+  btnStop.addEventListener('click', () => {
+      socket.emit('stop-rist');
+  });
+
+  document.getElementById('btnClearConsole').addEventListener('click', () => {
+      consoleOutput.textContent = '';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "rist-ctrl",
+  "version": "1.0.0",
+  "description": "RIST Receiver Controller - Master Control Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
