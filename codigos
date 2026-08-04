@@ -68,8 +68,13 @@ Media path: 'srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&r
 CONFERIR
 sudo sysctl --system
 
+SUBIR NO BOOT
 crontab -e
+SRT
 @reboot screen -dmS transmissao bash -c 'while true; do sudo nice -n -20 srt-live-transmit "srt://45.176.5.154:7077?mode=caller&latency=3000&payloadsize=1316&rcvbuf=8388608&sendbuf=8388608&maxbw=12500000&tlpktdrop=true&conntimeout=5000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Reiniciando..."; sleep 5; done'
+
+RIST
+@reboot screen -dmS transmissao bash -c 'while true; do sudo nice -n -20 rist://45.176.5.154:7077 -o udp://10.10.23.5:1234 -p 1 -b 10000" "udp://10.10.23.5:1234?pkt_size=1316"; echo "Reiniciando..."; sleep 5; done'
 
 
 
