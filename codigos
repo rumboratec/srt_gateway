@@ -1,10 +1,17 @@
 nohup chrt -f 80 ristreceiver -i "rist://45.176.5.154:7077?buffer-min=10000&buffer-max=10000&bandwidth=50000&return-bandwidth=0&reorder-buffer=250&rtt-min=50&rtt-max=2000&min-retries=20&max-retries=100&congestion-control=2&keepalive-interval=1000&session-timeout=30000" -o udp://10.10.23.5:1234 >/dev/null 2>&1 &
 
+
+
 ristreceiver -i "rist://45.176.5.154:7077?buffer-min=10000&buffer-max=10000&bandwidth=50000&return-bandwidth=0&reorder-buffer=250&rtt-min=50&rtt-max=2000&min-retries=20&max-retries=100&congestion-control=2&keepalive-interval=1000&session-timeout=30000" -o udp://192.168.192.72:9595 -p 1
 
 RIST
 sudo apt install rist-tools
 ristreceiver --version
+
+CANINDE RTV
+nohup chrt -f 80 ristreceiver -i "rist://45.176.5.154:7077?buffer-min=10000&buffer-max=10000&bandwidth=50000&return-bandwidth=0&reorder-buffer=250&rtt-min=50&rtt-max=2000&min-retries=20&max-retries=100&congestion-control=2&keepalive-interval=1000&session-timeout=30000" -o udp://10.10.30.46:4567 >/dev/null 2>&1 &
+
+
 
 ristreceiver -i rist://45.176.5.154:7077 -o udp://192.168.192.158:8181 -p 1 -b 5000
 
